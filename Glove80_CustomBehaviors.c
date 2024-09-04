@@ -604,6 +604,9 @@ conditional_layers {
 
 behaviors {
 
+
+    // Layer Behaviors
+
     // Hold for modifier, tap to toggle layer
 
     mtog: mod_toggle {
@@ -626,18 +629,38 @@ behaviors {
     bindings = <&tog>, <&kp>;
     };
 
-    // Removed // Shifted version of a key on a long press - this has been updated below with os specific shortcuts so that
+    // Shifted version of a key on a long press - this has been updated below with os specific shortcuts so that
    
-    // #define AS(keycode) as LS(keycode) keycode
+    #define AS(keycode) as LS(keycode) keycode
 
-    // as: auto_shift { // this behavior has been mapped to the new modified osx autoshift with command action
-    // compatible = "zmk,behavior-hold-tap";
-    // binding-cells = <2>;
-    // flavor = "tap-preferred";
-    // tapping_term_ms = <AUTO_SHIFT_TERM>;
-    // quick_tap_ms = <KEY_REPEATING_TERM>;
-    // bindings = <&kp>, <&kp>;
-    // };
+    as: auto_shift { 
+    compatible = "zmk,behavior-hold-tap";
+    binding-cells = <2>;
+    flavor = "tap-preferred";
+    tapping_term_ms = <AUTO_SHIFT_TERM>;
+    quick_tap_ms = <KEY_REPEATING_TERM>;
+    bindings = <&kp>, <&kp>;
+    };
+
+    /////////////////////////////
+    // Keypress & Layer Toggle //
+    /////////////////////////////
+
+    // Hold-tap behavior to toggle a layer on hold
+
+    #define LAYER_TAP(layer, keycode) layer_tap layer keycode
+
+    lt: layer_tap_behavior {
+    compatible = "zmk,behavior-hold-tap";
+    #binding-cells = <2>;
+    flavor = "tap-preferred";                 // Preferred behavior on tap
+    tapping_term_ms = <TAPPING_TERM>;         // Time threshold for deciding tap vs hold
+    quick_tap_ms =  <KEY_REPEATING_TERM>;     // Time threshold for quick tap
+    bindings = <&kp>, <&mo>;                  // Tap sends key, hold toggles layer
+    };
+
+    // Example usage: Toggles a layer on hold and sends 'A' on tap
+    // &lt 1 &kp A; // Adjust the layer number and keycode as needed
 
     //////////////////////
     //   OSX specific   //
@@ -649,22 +672,20 @@ behaviors {
     
     // Define a custom multi-action behavior for tap(only keypress), short hold(shifted keypress), and long hold(LGUI Plus &kp)
    
-    #define mth(keycode) as LGUI(keycode)
-
     mth: multi_tap_hold_behavior {
     compatible = "zmk,behavior-tap-hold";
     #binding-cells = <2>;
-    flavor = "tap-preferred";                     // Tap action preferred over hold
-    tapping-term-ms = <TAPPING_TERM>;             // Threshold for deciding tap vs short hold
-    quick-tap-ms = <KEY_REPEATING_TERM>;          // Threshold for quick tap
-    hold-tapping-term-ms = <500>;                 // Threshold for deciding short vs long hold
-    bindings = <&kp>, <&kp LS>;                   // Tap, short hold
+    flavor = "tap-preferred";                          // Tap action preferred over hold
+    tapping-term-ms = <TAPPING_TERM>;                  // Threshold for deciding tap vs short hold
+    quick-tap-ms = <KEY_REPEATING_TERM>;               // Threshold for quick tap
+    hold-tapping-term-ms = <500>;                      // Threshold for deciding short vs long hold
+    bindings = <&kp>, <LS(&kp)>                        // Tap, short hold behaviors
     };
 
     //written to be nested within mth action so that tap does &kp, short hold does LS(&kp) and then double press does LGUI(&KP)
     //these actions cannot be combined in a single action, so they have to be nested
 
-    dtmth: double_tap_hold_behavior {
+    odtmth: osx_double_tap_hold_behavior {
     compatible = "zmk,behavior-multi-tap";       // For handling double-tap detection
     #binding-cells = <2>;
     tapping-term-ms = <TAPPING_TERM>;            // Threshold for multi-tap detection
@@ -673,12 +694,16 @@ behaviors {
     bindings = <&mth>, <&kp LGUI>;               // Double-tap sends LGUI-modified key
     };
 
+    // Example Usage //
+    // &odtmth KEYCODE;  // Replace KEYCODE with the specific key you are configuring
+
 
     ////////////////////////////////////////////
     // Modified OSX Gdoc headers with Command //
     ////////////////////////////////////////////
 
     // Define a custom behavior to send Alt + Control + keypress on tap
+    // this is for use with google docs on windows
 
     #define ALT_CTRL_TAP(keycode) &alt_ctrl_tap_behavior keycode
 
@@ -698,9 +723,6 @@ behaviors {
     // OSX Specific End // 
     //////////////////////
 
-
-
-
     ////////////////////          ////////////////////          ////////////////////
     ////////////////////          ////////////////////          ////////////////////
 
@@ -715,23 +737,22 @@ behaviors {
     ////////////////////////////////////////////
     // Modified Window Autoshift with Command //
     ////////////////////////////////////////////
-    
-    // Custom multi-action windows only behavior for tap(only keypress), short hold(shifted keypress), and long hold(RCTRL Plus &kp)
-    
-    #define MULTI_TAP_HOLD(keycode) multi_tap_hold (keycode)
 
-    wmth: multi_tap_hold_behavior {
-    compatible = "zmk,behavior-tap-hold";
-    #binding-cells = <3>;
-    flavor = "tap-preferred";                  // Tap action preferred over hold
-    tapping-term-ms = <TAPPING_TERM>;          // Threshold for deciding tap vs short hold
-    quick-tap-ms = <KEY_REPEATING_TERM>;       // Threshold for quick tap
-    hold-tapping-term-ms = <500>;              // Threshold for deciding short vs long hold
-    bindings = <&kp>, <&kp LS()>, <&kp LGUI>;  // Tap, short hold, long hold actions
+    // written to be nested within mth action so that tap does &kp, short hold does LS(&kp) and then double press does RCTRL(&KP)
+    // this action is updated to be specific to window ctrl action
+    // these actions cannot be combined in a single action, so they have to be nested
+    
+    wdtmth: windows_double_tap_hold_behavior {
+    compatible = "zmk,behavior-multi-tap";       // For handling double-tap detection
+    #binding-cells = <2>;
+    tapping-term-ms = <TAPPING_TERM>;            // Threshold for multi-tap detection
+    quick-tap-ms = <KEY_REPEATING_TERM>;         // Time between taps for double-tap
+    taps-required = <2>;                         // Set for double-tap action
+    bindings = <&mth>, <&kp RCTRL>;               // Double-tap sends RCTRL-modified key
     };
 
-    // Example usage: On tap sends 'A', on short hold sends 'Shift + A', on long hold sends 'LGUI + A'  
-    // &wmth &kp A;
+    // Example usage: On tap sends 'A', on short hold sends 'Shift + A', on long hold sends 'RCTRL + A'  
+    // &wdtmth &kp A;
 
     ////////////////////          ////////////////////          ////////////////////
     
@@ -745,6 +766,8 @@ behaviors {
     /////////////////////////////
     /////////////////////////////
       
+    // Dynamic Macros 
+
     /////////////////////////////
     //    2 &kp Combo Macro    //
     /////////////////////////////
@@ -763,27 +786,9 @@ behaviors {
     };
 
     // Example usage: on tap it send two different keystrokes 
-    // &tmtp LALT TAB
+    // &cht LALT TAB
 
-    /////////////////////////////
-    // Keypress & Layer Toggle //
-    /////////////////////////////
 
-    // Hold-tap behavior to toggle a layer on hold
-
-    #define LAYER_TAP(layer, keycode) layer_tap layer keycode
-
-    lt: layer_tap_behavior {
-    compatible = "zmk,behavior-hold-tap";
-    #binding-cells = <2>;
-    flavor = "tap-preferred";                 // Preferred behavior on tap
-    tapping_term_ms = <200>;                  // Time threshold for deciding tap vs hold
-    quick_tap_ms =  <KEY_REPEATING_TERM>;     // Time threshold for quick tap
-    bindings = <&kp>, <&mo>;                  // Tap sends key, hold toggles layer
-    };
-
-    // Example usage: Toggles a layer on hold and sends 'A' on tap
-    // &layer_tap 1 &kp A; // Adjust the layer number and keycode as needed
 
     ////////////////////          ////////////////////          ////////////////////
 
@@ -809,52 +814,6 @@ behaviors {
     //       Global End      //
     ///////////////////////////
     ///////////////////////////
-
-    // X shifted version on a long press, CUT when GUI modified
-    asmmx: auto_shift_mod_morph_x {
-    compatible = "zmk,behavior-mod-morph";
-    #binding-cells = <0>;
-    bindings = <&AS(X)>, <&kp K_CUT>;
-    mods = <(MOD_LGUI)>;
-    keep-mods = <(MOD_LGUI)>;
-    };
-
-    // C shifted version on a long press, COPY when GUI modified
-    asmmc: auto_shift_mod_morph_c {
-    compatible = "zmk,behavior-mod-morph";
-    #binding-cells = <0>;
-    bindings = <&AS(C)>, <&kp K_COPY>;
-    mods = <(MOD_LGUI)>;
-    keep-mods = <(MOD_LGUI)>;
-    };
-
-    // V shifted version on a long press, PASTE when GUI modified
-    asmmv: auto_shift_mod_morph_v {
-    compatible = "zmk,behavior-mod-morph";
-    #binding-cells = <0>;
-    bindings = <&AS(V)>, <&kp K_PASTE>;
-    mods = <(MOD_LGUI)>;
-    keep-mods = <(MOD_LGUI)>;
-    };
-
-    // Hold for a key, Caps Lock on a tap - pass dummy parameter value for caps_lock
-    hcl: hold_caps_lock {
-      compatible = "zmk,behavior-hold-tap";
-      #binding-cells = <2>;
-      flavor = "hold-preferred";
-      tapping_term_ms = <TAPPING_TERM>;
-      bindings = <&kp>, <&caps_lock>;
-    };
-  
-    // Hold for a key, Caps Word on a tap - pass dummy parameter value for caps_word
-    hcw: hold_caps_word {
-      compatible = "zmk,behavior-hold-tap";
-      #binding-cells = <2>;
-      flavor = "hold-preferred";
-      tapping_term_ms = <TAPPING_TERM>;
-      bindings = <&kp>, <&caps_word>;
-    };
-};
 
 macros {
   // Caps lock with a brief paused hold, for MacOS
